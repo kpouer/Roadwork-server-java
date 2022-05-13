@@ -16,36 +16,46 @@
 package com.kpouer.roadworkserver.controller;
 
 import com.kpouer.roadwork.model.sync.SyncData;
+import com.kpouer.roadworkserver.config.SecurityConfig;
+import com.kpouer.roadworkserver.model.User;
 import com.kpouer.roadworkserver.service.DataService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.Map;
 
 /**
  * @author Matthieu Casanova
  */
-@Controller
+@org.springframework.web.bind.annotation.RestController
 public class RestController {
     private static final Logger logger = LoggerFactory.getLogger(RestController.class);
 
     private final DataService dataService;
+    private final SecurityConfig securityConfig;
 
-    public RestController(DataService dataService) {
+    public RestController(DataService dataService, SecurityConfig securityConfig) {
         this.dataService = dataService;
+        this.securityConfig = securityConfig;
     }
 
     @PostMapping("/setData/{team}/{opendataService}")
-    public ResponseEntity<Map<String, SyncData>> setData(@PathVariable String team, @PathVariable String opendataService, @RequestBody Map<String, SyncData> syncDataList) {
+    public ResponseEntity<Map<String, SyncData>> setData(HttpServletRequest request, @PathVariable String team, @PathVariable String opendataService, @RequestBody Map<String, SyncData> syncDataList) {
+        String username = request.getUserPrincipal().getName();
+        User userDetails = securityConfig.getUser(username);
         MDC.put("team", team);
+        MDC.put("user", username);
         MDC.put("service", opendataService);
+        if (!userDetails.hasTeam(team)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        }
         logger.info("setData");
 
         Map<String, SyncData> stringSyncDataMap = dataService.setData(team, opendataService, syncDataList);

@@ -15,45 +15,79 @@
  */
 package com.kpouer.roadworkserver.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kpouer.roadworkserver.model.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint;
 
-import java.util.List;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
+ * Security config.
  * @author Matthieu Casanova
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     private final BasicAuthenticationEntryPoint authenticationEntryPoint;
-    private final SimpleGrantedAuthority autority;
     private final InMemoryUserDetailsManager userDetailsService;
+    private final Config config;
+    private Map<String, User> users = Collections.emptyMap();
 
-    public SecurityConfig(@Value("${spring.security.user.name}") String user,
-                          @Value("${spring.security.user.password}") String pass) {
+    public SecurityConfig(Config config) {
+        this.config = config;
         authenticationEntryPoint = new BasicAuthenticationEntryPoint();
         authenticationEntryPoint.setRealmName("Roadwork");
         userDetailsService = new InMemoryUserDetailsManager();
-        autority = new SimpleGrantedAuthority("Closure");
-        List<SimpleGrantedAuthority> closure = List.of(autority);
-        userDetailsService.createUser(new User(user, pass, closure));
+        loadUsers();
+    }
+
+    public User getUser(String name) {
+        return users.get(name);
+    }
+
+    public void loadUsers() {
+        logger.info("loadUsers");
+        Path path = Path.of(config.getDataPath(), "users.json");
+        users.keySet().forEach(userDetailsService::deleteUser);
+        if (Files.exists(path)) {
+            try {
+                ObjectMapper objectMapper = new ObjectMapper();
+                User[] users = objectMapper.readValue(path.toFile(), User[].class);
+                Arrays.stream(users).forEach(userDetailsService::createUser);
+                this.users = new HashMap<>();
+                Arrays.stream(users).forEach(user -> this.users.put(user.getUsername(), user));
+            } catch (IOException e) {
+                logger.error("Unable read data", e);
+            }
+        } else {
+            logger.warn("No {} file", path);
+            users.keySet().forEach(userDetailsService::deleteUser);
+            users = Collections.emptyMap();
+        }
     }
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         auth.userDetailsService(userDetailsService)
-                .passwordEncoder(NoOpPasswordEncoder.getInstance());
+                .userDetailsPasswordManager(userDetailsService)
+                .passwordEncoder(new BCryptPasswordEncoder());
     }
 
     @Override
@@ -62,7 +96,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         http.headers().disable();
         http
                 .authorizeRequests()
-                .antMatchers("/setData/*").hasAnyAuthority("Closure")
+                .antMatchers("/setData/*").hasAuthority("Closure")
                 .anyRequest().authenticated()
                 .and()
                 .httpBasic()
