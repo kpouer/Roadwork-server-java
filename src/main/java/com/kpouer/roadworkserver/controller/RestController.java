@@ -54,7 +54,7 @@ public class RestController {
         MDC.put("user", username);
         MDC.put("service", opendataService);
         if (!userDetails.hasTeam(team)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
         logger.info("setData");
 
