@@ -24,6 +24,8 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -60,5 +62,10 @@ public class RestController {
 
         Map<String, SyncData> stringSyncDataMap = dataService.setData(team, opendataService, syncDataList);
         return new ResponseEntity<>(stringSyncDataMap, HttpStatus.OK);
+    }
+
+    @GetMapping("/salt/{password}")
+    public String salt(@PathVariable("password") String password) {
+        return new BCryptPasswordEncoder().encode(password);
     }
 }

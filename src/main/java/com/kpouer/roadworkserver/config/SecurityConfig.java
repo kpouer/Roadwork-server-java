@@ -97,6 +97,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         http
                 .authorizeRequests()
                 .antMatchers("/setData/*").hasAuthority("Closure")
+                .antMatchers("/salt/*").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .httpBasic()
