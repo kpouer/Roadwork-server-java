@@ -28,8 +28,7 @@ import java.util.List;
 public class User implements UserDetails {
     private String username;
     /**
-     * The password is stored as the following
-     * sha256(sha256(password + username)+salt)
+     * The password is salted using BCrypt
      */
     private String password;
     private String[] teams;
