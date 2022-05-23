@@ -13,7 +13,8 @@ Just store and synchronize data sent by Roadwork application.
 
 # Technical information
 
-This service only rely on json files and no database is used at all. 
+This service only rely on json files and no database is used at all. It uses a shared library that you can get here
+https://github.com/kpouer/Roadwork-lib containing the shared datamodel between the Roadwork app and this server
 
 # User management
 
