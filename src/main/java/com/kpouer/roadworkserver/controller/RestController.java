@@ -50,6 +50,9 @@ public class RestController {
 
     @PostMapping("/setData/{team}/{opendataService}")
     public ResponseEntity<Map<String, SyncData>> setData(HttpServletRequest request, @PathVariable String team, @PathVariable String opendataService, @RequestBody Map<String, SyncData> syncDataList) {
+        if (opendataService.endsWith(".json")) {
+            opendataService = opendataService.substring(0, opendataService.length() - ".json".length());
+        }
         String username = request.getUserPrincipal().getName();
         User userDetails = securityConfig.getUser(username);
         MDC.put("team", team);
