@@ -31,10 +31,7 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationEn
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Security config.
@@ -102,5 +99,21 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 .httpBasic()
                 .authenticationEntryPoint(authenticationEntryPoint);
+    }
+
+    /**
+     * Returns a list of all teams.
+     *
+     * @return a list of all teams
+     */
+    public Collection<String> getTeams() {
+        Collection<String> teams = new HashSet<>();
+        users
+                .values()
+                .stream()
+                .map(User::getTeams)
+                .map(List::of)
+                .forEach(teams::addAll);
+        return teams;
     }
 }
