@@ -56,9 +56,9 @@ public class RestController {
         MDC.put("user", username);
         MDC.put("service", opendataService);
         if (!userDetails.hasTeam(team)) {
+            logger.warn("User do not belong to that team");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
-        logger.info("setData");
 
         Map<String, SyncData> stringSyncDataMap = dataService.setData(team, opendataService, syncDataList);
         return new ResponseEntity<>(stringSyncDataMap, HttpStatus.OK);
