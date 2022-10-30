@@ -57,7 +57,7 @@ public class DataService {
 
     private Map<String, SyncData> getData(String team, String opendataService) {
         Path dataPath = getPath(team, opendataService);
-        logger.info("getData team={} service={} path={}", team, opendataService, dataPath);
+        logger.info("getData path={}", dataPath);
         if (Files.exists(dataPath)) {
             try {
                 JavaType listType = objectMapper.getTypeFactory().constructMapType(Map.class, String.class, SyncData.class);
@@ -72,7 +72,6 @@ public class DataService {
 
     /**
      * Merge existing data with new data.
-     *
      *
      * @param team            the team name
      * @param opendataService the service name
