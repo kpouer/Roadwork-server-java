@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Matthieu Casanova
+ * Copyright 2022-2023 Matthieu Casanova
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,16 @@
  */
 package com.kpouer.roadworkserver.config;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.context.annotation.Configuration;
 
 /**
  * @author Matthieu Casanova
  */
 @Configuration
+@Getter
+@Setter
 public class Config {
     private String dataPath = "data";
-
-    public String getDataPath() {
-        return dataPath;
-    }
-
-    public void setDataPath(String dataPath) {
-        this.dataPath = dataPath;
-    }
 }
