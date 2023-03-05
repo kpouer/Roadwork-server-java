@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Matthieu Casanova
+ * Copyright 2022-2023 Matthieu Casanova
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,10 @@
  */
 package com.kpouer.roadworkserver.service;
 
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kpouer.roadwork.model.sync.SyncData;
 import com.kpouer.roadworkserver.config.Config;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -28,15 +26,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Map.Entry;
 
 /**
  * @author Matthieu Casanova
  */
 @Service
+@Slf4j
 public class DataService {
-    private static final Logger logger = LoggerFactory.getLogger(DataService.class);
-
     private final Config config;
     private final ObjectMapper objectMapper;
 
@@ -47,7 +43,7 @@ public class DataService {
 
     public Map<String, SyncData> setData(String team, String opendataService, Map<String, SyncData> syncDataList) {
         logger.info("setData");
-        Map<String, SyncData> existingSyncDataList = getData(team, opendataService);
+        var existingSyncDataList = getData(team, opendataService);
         return merge(team, opendataService, existingSyncDataList, syncDataList);
     }
 
@@ -56,11 +52,11 @@ public class DataService {
     }
 
     private Map<String, SyncData> getData(String team, String opendataService) {
-        Path dataPath = getPath(team, opendataService);
+        var dataPath = getPath(team, opendataService);
         logger.info("getData path={}", dataPath);
         if (Files.exists(dataPath)) {
             try {
-                JavaType listType = objectMapper.getTypeFactory().constructMapType(Map.class, String.class, SyncData.class);
+                var listType = objectMapper.getTypeFactory().constructMapType(Map.class, String.class, SyncData.class);
                 return objectMapper.readValue(dataPath.toFile(), listType);
             } catch (IOException e) {
                 logger.error("Unable read data", e);
@@ -81,11 +77,11 @@ public class DataService {
      */
     private Map<String, SyncData> merge(String team, String opendataService, Map<String, SyncData> existingSyncDataList, Map<String, SyncData> newSyncDataList) {
         logger.info("merge");
-        long serverUpdateTime = System.currentTimeMillis();
-        for (Entry<String, SyncData> entry : existingSyncDataList.entrySet()) {
-            SyncData existingSyncData = entry.getValue();
-            String id = entry.getKey();
-            SyncData newSyncData = newSyncDataList.get(id);
+        var serverUpdateTime = System.currentTimeMillis();
+        for (var entry : existingSyncDataList.entrySet()) {
+            var existingSyncData = entry.getValue();
+            var id = entry.getKey();
+            var newSyncData = newSyncDataList.get(id);
             if (newSyncData != null) {
                 if (newSyncData.isDirty()) {
                     if (newSyncData.getServerUpdateTime() == existingSyncData.getServerUpdateTime()) {
@@ -123,7 +119,7 @@ public class DataService {
     }
 
     private void save(String team, String opendataService, Map<String, SyncData> roadworkData) {
-        Path path = getPath(team, opendataService);
+        var path = getPath(team, opendataService);
         logger.info("save to {}", path);
         try {
             Files.createDirectories(path.getParent());
