@@ -15,12 +15,17 @@
  */
 package com.kpouer.roadworkserver.controller;
 
-import com.kpouer.roadworkserver.config.SecurityConfig;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.kpouer.roadworkserver.config.UserConfig;
+import com.kpouer.roadworkserver.model.User;
+import com.kpouer.roadworkserver.model.serdes.UserSerializer;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,19 +40,30 @@ import java.util.Collection;
 @RestController
 @RequiredArgsConstructor
 public class AdminController {
-    private final SecurityConfig securityConfig;
+    private final UserConfig userConfig;
+    private final PasswordEncoder passwordEncoder;
 
     @GetMapping(value = "/admin/teams", produces = "application/json")
     public ResponseEntity<Collection<String>> listTeams(HttpServletRequest request) {
         var username = request.getUserPrincipal().getName();
-        var userDetails = securityConfig.getUser(username);
         MDC.clear();
         MDC.put("user", username);
-        return new ResponseEntity<>(securityConfig.getTeams(), HttpStatus.OK);
+        return new ResponseEntity<>(userConfig.getTeams(), HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/admin/users", produces = "application/json")
+    public ResponseEntity<String> listUsers(HttpServletRequest request) throws JsonProcessingException {
+        var username = request.getUserPrincipal().getName();
+        MDC.clear();
+        MDC.put("user", username);
+        var objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new SimpleModule().addSerializer(User.class, new UserSerializer()));
+        var userJson = objectMapper.writeValueAsString(userConfig.getUsers().values());
+        return new ResponseEntity<>(userJson, HttpStatus.OK);
     }
 
     @GetMapping("/salt/{password}")
     public String salt(@PathVariable("password") String password) {
-        return new BCryptPasswordEncoder().encode(password);
+        return passwordEncoder.encode(password);
     }
 }

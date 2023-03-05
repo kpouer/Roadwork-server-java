@@ -16,7 +16,7 @@
 package com.kpouer.roadworkserver.controller;
 
 import com.kpouer.roadwork.model.sync.SyncData;
-import com.kpouer.roadworkserver.config.SecurityConfig;
+import com.kpouer.roadworkserver.config.UserConfig;
 import com.kpouer.roadworkserver.service.DataService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -37,7 +36,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class RoadworkController {
     private final DataService dataService;
-    private final SecurityConfig securityConfig;
+    private final UserConfig userConfig;
 
     @PostMapping("/setData/{team}/{opendataService}")
     public ResponseEntity<Map<String, SyncData>> setData(HttpServletRequest request,
@@ -48,7 +47,7 @@ public class RoadworkController {
             opendataService = opendataService.substring(0, opendataService.length() - ".json".length());
         }
         var username = request.getUserPrincipal().getName();
-        var userDetails = securityConfig.getUser(username);
+        var userDetails = userConfig.getUser(username);
         MDC.put("team", team);
         MDC.put("user", username);
         MDC.put("service", opendataService);

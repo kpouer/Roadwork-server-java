@@ -15,8 +15,8 @@
  */
 package com.kpouer.roadworkserver.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kpouer.roadworkserver.model.User;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,11 +30,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
-
 /**
  * Security config.
  * @author Matthieu Casanova
@@ -42,44 +37,16 @@ import java.util.*;
 @Configuration
 @EnableWebSecurity
 @Slf4j
+@RequiredArgsConstructor
 public class SecurityConfig {
-    private final BasicAuthenticationEntryPoint authenticationEntryPoint;
-    private final InMemoryUserDetailsManager userDetailsService;
-    private final Config config;
-    private Map<String, User> users = Collections.emptyMap();
+    private final BasicAuthenticationEntryPoint authenticationEntryPoint =  new BasicAuthenticationEntryPoint();
+    private final InMemoryUserDetailsManager userDetailsService = new InMemoryUserDetailsManager();
+    private final UserConfig userConfig;
 
-    public SecurityConfig(Config config) {
-        this.config = config;
-        authenticationEntryPoint = new BasicAuthenticationEntryPoint();
+    @PostConstruct
+    public void postConstruct() {
         authenticationEntryPoint.setRealmName("Roadwork");
-        userDetailsService = new InMemoryUserDetailsManager();
-        loadUsers();
-    }
-
-    public User getUser(String name) {
-        return users.get(name);
-    }
-
-    public void loadUsers() {
-        logger.info("loadUsers");
-        var path = Path.of(config.getDataPath(), "users.json");
-        // remove all users
-        users.keySet().forEach(userDetailsService::deleteUser);
-        if (Files.exists(path)) {
-            try {
-                var objectMapper = new ObjectMapper();
-                var users = objectMapper.readValue(path.toFile(), User[].class);
-                Arrays.stream(users).forEach(userDetailsService::createUser);
-                this.users = new HashMap<>();
-                Arrays.stream(users).forEach(user -> this.users.put(user.getUsername(), user));
-            } catch (IOException e) {
-                logger.error("Unable read data", e);
-            }
-        } else {
-            logger.warn("No {} file", path);
-            users.keySet().forEach(userDetailsService::deleteUser);
-            users = Collections.emptyMap();
-        }
+        userConfig.getUsers().values().forEach(userDetailsService::createUser);
     }
 
     @Bean
@@ -112,19 +79,10 @@ public class SecurityConfig {
                 .passwordEncoder(new BCryptPasswordEncoder());
     }
 
-    /**
-     * Returns a list of all teams.
-     *
-     * @return a list of all teams
-     */
-    public Collection<String> getTeams() {
-        var teams = new HashSet<String>();
-        users
-                .values()
-                .stream()
-                .map(User::getTeams)
-                .map(List::of)
-                .forEach(teams::addAll);
-        return teams;
+    public void removeAllUsers() {
+        logger.info("Removing all users");
+        userConfig.getUsers().keySet().forEach(userDetailsService::deleteUser);
+        userConfig.loadUsers();
+        userConfig.getUsers().values().forEach(userDetailsService::createUser);
     }
 }
