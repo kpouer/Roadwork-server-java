@@ -51,8 +51,8 @@ public class UserConfig {
         if (Files.exists(path)) {
             try {
                 var objectMapper = new ObjectMapper();
-                var users = objectMapper.readValue(path.toFile(), User[].class);
-                this.users = Arrays.stream(users).collect(Collectors.toMap(User::getUsername, Function.identity()));
+                var userArray = objectMapper.readValue(path.toFile(), User[].class);
+                users = Arrays.stream(userArray).collect(Collectors.toMap(User::getUsername, Function.identity()));
             } catch (IOException e) {
                 logger.error("Unable read data", e);
                 users = Collections.emptyMap();
