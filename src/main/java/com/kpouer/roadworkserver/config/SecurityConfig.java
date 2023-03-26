@@ -15,26 +15,20 @@
  */
 package com.kpouer.roadworkserver.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kpouer.roadworkserver.model.User;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 /**
  * Security config.
@@ -42,65 +36,53 @@ import java.util.Map;
  */
 @Configuration
 @EnableWebSecurity
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
-    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+@Slf4j
+@RequiredArgsConstructor
+public class SecurityConfig {
+    private final BasicAuthenticationEntryPoint authenticationEntryPoint =  new BasicAuthenticationEntryPoint();
+    private final InMemoryUserDetailsManager userDetailsService = new InMemoryUserDetailsManager();
+    private final UserConfig userConfig;
 
-    private final BasicAuthenticationEntryPoint authenticationEntryPoint;
-    private final InMemoryUserDetailsManager userDetailsService;
-    private final Config config;
-    private Map<String, User> users = Collections.emptyMap();
-
-    public SecurityConfig(Config config) {
-        this.config = config;
-        authenticationEntryPoint = new BasicAuthenticationEntryPoint();
+    @PostConstruct
+    public void postConstruct() {
         authenticationEntryPoint.setRealmName("Roadwork");
-        userDetailsService = new InMemoryUserDetailsManager();
-        loadUsers();
+        userConfig.getUsers().values().forEach(userDetailsService::createUser);
     }
 
-    public User getUser(String name) {
-        return users.get(name);
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
-    public void loadUsers() {
-        logger.info("loadUsers");
-        Path path = Path.of(config.getDataPath(), "users.json");
-        users.keySet().forEach(userDetailsService::deleteUser);
-        if (Files.exists(path)) {
-            try {
-                ObjectMapper objectMapper = new ObjectMapper();
-                User[] users = objectMapper.readValue(path.toFile(), User[].class);
-                Arrays.stream(users).forEach(userDetailsService::createUser);
-                this.users = new HashMap<>();
-                Arrays.stream(users).forEach(user -> this.users.put(user.getUsername(), user));
-            } catch (IOException e) {
-                logger.error("Unable read data", e);
-            }
-        } else {
-            logger.warn("No {} file", path);
-            users.keySet().forEach(userDetailsService::deleteUser);
-            users = Collections.emptyMap();
-        }
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeHttpRequests()
+                .requestMatchers(new AntPathRequestMatcher("/admin/*")).hasAuthority("Admin")
+                .requestMatchers(new AntPathRequestMatcher("/setData/*")).hasAuthority("Closure")
+                .requestMatchers(new AntPathRequestMatcher("/salt/*")).permitAll()
+                .anyRequest().authenticated()
+                .and()
+                .httpBasic()
+                .authenticationEntryPoint(authenticationEntryPoint);
+        return http.build();
     }
 
-    @Override
+    @Bean
+    public InMemoryUserDetailsManager userDetailsManager() {
+        return userDetailsService;
+    }
+
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         auth.userDetailsService(userDetailsService)
                 .userDetailsPasswordManager(userDetailsService)
                 .passwordEncoder(new BCryptPasswordEncoder());
     }
 
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http.csrf().disable();
-        http.headers().disable();
-        http
-                .authorizeRequests()
-                .antMatchers("/setData/*").hasAuthority("Closure")
-                .antMatchers("/salt/*").permitAll()
-                .anyRequest().authenticated()
-                .and()
-                .httpBasic()
-                .authenticationEntryPoint(authenticationEntryPoint);
+    public void removeAllUsers() {
+        logger.info("Removing all users");
+        userConfig.getUsers().keySet().forEach(userDetailsService::deleteUser);
+        userConfig.loadUsers();
+        userConfig.getUsers().values().forEach(userDetailsService::createUser);
     }
 }

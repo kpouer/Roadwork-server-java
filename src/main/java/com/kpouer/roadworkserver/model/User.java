@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Matthieu Casanova
+ * Copyright 2022-2023 Matthieu Casanova
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,22 @@
  */
 package com.kpouer.roadworkserver.model;
 
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 /**
  * @author Matthieu Casanova
  */
+@Getter
+@Setter
+@ToString(exclude = "password")
 public class User implements UserDetails {
     private String username;
     /**
@@ -32,36 +38,16 @@ public class User implements UserDetails {
      */
     private String password;
     private String[] teams;
-
-    @Override
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    @Override
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String[] getTeams() {
-        return teams;
-    }
-
-    public void setTeams(String[] teams) {
-        this.teams = teams;
-    }
+    private boolean admin;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("Closure"));
+        var authorities = new ArrayList<GrantedAuthority>();
+        authorities.add(new SimpleGrantedAuthority("Closure"));
+        if (admin) {
+            authorities.add(new SimpleGrantedAuthority("Admin"));
+        }
+        return authorities;
     }
 
     @Override
@@ -85,7 +71,7 @@ public class User implements UserDetails {
     }
 
     public boolean hasTeam(String team) {
-        for (String t : teams) {
+        for (var t : teams) {
             if (t.equals(team)) {
                 return true;
             }
