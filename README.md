@@ -1,6 +1,10 @@
 # Roadwork-server
 Roadwork server (for team work synchronization)
 
+## Archived
+
+Replaced by https://github.com/kpouer/roadwork-server
+
 ## Introduction
 
 This is a server intended to help team synchronize their work when using Roadwork app (https://github.com/kpouer/Roadwork)
